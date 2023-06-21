@@ -160,8 +160,16 @@ class TransformerModel(BaseModel):
         asymmetric=False,
         cuda=None,
     ):
-        if cuda is None:
-            cuda = torch.cuda.is_available()
+        import ctypes
+        try:
+            import torch_directml
+            _ = ctypes.CDLL('libd3d12.so')
+            if not torch_directml.is_available():
+                raise Exception("Device not available")
+            self._device = torch_directml.device()
+        except OSError:
+            self._device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")         
+
         self.model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModel.from_pretrained(model_name)
@@ -195,10 +203,7 @@ class TransformerModel(BaseModel):
         )
 
         self.asymmetric = asymmetric
-
-        self.cuda = cuda
-        if self.cuda:
-            self.model = self.model.cuda()
+        self.model.to(self._device)
 
     def get_config(self):
         return {
@@ -301,10 +306,9 @@ class TransformerModel(BaseModel):
             ],
             batch_first=True,
             padding_value=0,
-        )
-        if self.cuda:
-            input_ids = input_ids.cuda()
-            attention_mask = attention_mask.cuda()
+        )    
+        input_ids = input_ids.to(self._device)
+        attention_mask = attention_mask.to(self._device)
         with torch.no_grad():
             model_output = self.model(
                 input_ids=input_ids, attention_mask=attention_mask

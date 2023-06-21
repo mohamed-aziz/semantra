@@ -24,7 +24,8 @@ dependencies = [
   "tiktoken>=0.3.3",
   "torch>=2.0.0",
   "tqdm>=4.65.0",
-  "transformers>=4.27.4"
+  "transformers>=4.27.4",
+  "torch-directml"  
 ]
 
 [project.urls]
